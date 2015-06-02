@@ -2,6 +2,7 @@
 #########################################################################
 ## Pre-requisite:                                                      ##
 ## -> wget                                                             ##
+## -> axel (fast download one file using multiple connections          ##
 ## -> unzip                                                            ##
 ## -> database client MySQL                                            ##
 #########################################################################
@@ -69,6 +70,15 @@ PropertyFeesList
 PropertyMandatoryFeesList
 PropertyRenovationsList
 )
+
+download_file() {
+    file_url=$1
+    wget -t10 -N --server-response  ${file_url} 2>&1 | grep "no newer" | wc -l | tr -d ' '
+    if [ "$ZIPOUT" -eq 0 ]; then
+        # remote file timestamp changed, ignore downloading
+        axel -n 5 file_url
+    fi
+}
 
 ## home where the process will execute
 cd ${HOME_DIR}
