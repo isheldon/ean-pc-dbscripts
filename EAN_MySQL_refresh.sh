@@ -159,7 +159,8 @@ do
     ## download the files via HTTP (no need for https), using time-stamping, -nd no host directories
     download_file http://www.ian.com/affiliatecenter/include/V2/$FILE.zip &
 done
-wait
+wait # wait untill all files are downloaded
+rm *.zip.* # remove temp files
 echo "Downloading files done."
 
 ### Update Data ###
@@ -193,7 +194,7 @@ do
         update_data &
     fi
 done
-wait
+wait # wait until all data is updated
 echo "Updates done."
 
 echo "Verify database against files..."
