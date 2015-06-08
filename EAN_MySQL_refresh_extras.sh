@@ -9,7 +9,7 @@ MYSQL_PASS=Passw@rd1
 MYSQL_HOST=localhost
 MYSQL_DB=eanextras
 # home directory of the user (in our case "eanuser")
-HOME_DIR=/home/eanuser
+HOME_DIR=${HOME}
 # protocol TCP All, SOCKET Unix only, PIPE Windows only, MEMORY Windows only
 MYSQL_PROTOCOL=SOCKET
 # 3336 as default,MAC using MAMP is 8889
@@ -39,10 +39,11 @@ geonames
 
 download_file() {
     file_url=$1
+    parts=$2
     ts_not_change=$(wget -t10 -N --server-response --spider ${file_url} 2>&1 | grep "no newer" | wc -l | tr -d ' ')
     if [ "${ts_not_change}" -eq 0 ]; then
         # remote file timestamp changed, download the file
-        axel -n 5 ${file_url}
+        axel -n ${parts} ${file_url}
     else
         echo "Remote file not changed, ignore downloading"
     fi
@@ -51,7 +52,7 @@ download_file() {
 update_data() {
     tablename=$1
     echo "Updating ($MYSQL_DB.$tablename) with REPLACE option..."
-    if [ "$tablename" == "" ]; then
+    if [ "$tablename" == "geonames" ]; then
         $CMD_MYSQL --execute="SET SESSION sql_mode = ''; LOAD DATA LOCAL INFILE '$tablename.txt' REPLACE INTO TABLE $tablename CHARACTER SET utf8 FIELDS TERMINATED BY '\t';"
     else
         $CMD_MYSQL --execute="SET SESSION sql_mode = ''; LOAD DATA LOCAL INFILE '$tablename.txt' REPLACE INTO TABLE $tablename CHARACTER SET utf8 FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' IGNORE 1 LINES;"
@@ -76,38 +77,40 @@ cd ${FILES_DIR}
 for TABLE in ${TABLES[@]}
 do
     if [ "${TABLE}" == "airports" ] || [ "${TABLE}" == "countries" ] || [ "${TABLE}" == "regions" ]; then
-        download_file http://www.ourairports.com/data/${TABLE}.csv
-        mv `echo ${TABLE} | tr \[A-Z\] \[a-z\]`.csv ${TABLE}.txt
+        download_file http://www.ourairports.com/data/${TABLE}.csv 5 &
     fi
 
     if [ "${TABLE}" == "openflightsairports" ]; then
-        download_file http://sourceforge.net/p/openflights/code/757/tree/openflights/data/airports.dat?format=raw &
+        download_file http://sourceforge.net/p/openflights/code/757/tree/openflights/data/airports.dat?format=raw 5 &
     fi
 
     if [ "${TABLE}" == "activepropertybusinessmodel" ]; then
-        download_file http://www.ian.com/affiliatecenter/include/V2/ActivePropertyBusinessModel.zip &
+        download_file http://www.ian.com/affiliatecenter/include/V2/ActivePropertyBusinessModel.zip 5 &
     fi
 
     if [ "${TABLE}" == "propertyidcrossreference" ]; then
-        download_file http://www.ian.com/affiliatecenter/include/PropertyID_Cross_Reference_Report.zip &
+        download_file http://www.ian.com/affiliatecenter/include/PropertyID_Cross_Reference_Report.zip 5 &
     fi
 
     if [ "${TABLE}" == "destinationids" ]; then
-        download_file http://www.ian.com/affiliatecenter/include/v2/Destination_Detail.zip &
+        download_file http://www.ian.com/affiliatecenter/include/v2/Destination_Detail.zip 5 &
     fi
 
     if [ "${TABLE}" == "landmark" ]; then
-        download_file http://www.ian.com/affiliatecenter/include/Landmark.zip &
+        download_file http://www.ian.com/affiliatecenter/include/Landmark.zip 5 &
     fi
 
     if [ "${TABLE}" == "geonames" ]; then
-        download_file http://download.geonames.org/export/dump/allCountries.zip &
+        download_file http://download.geonames.org/export/dump/allCountries.zip 10 &
     fi
 done
 wait # until all files are downloaded
 echo "downloading files done."
 
 # rename downloaded files to <table_name>.txt
+mv airports.csv airports.txt
+mv countries.csv countries.txt
+mv regions.csv regions.txt
 mv -f airports.dat* openflightsairports.txt
 unzip -L -o ActivePropertyBusinessModel.zip
 unzip -L -o PropertyID_Cross_Reference_Report.zip
